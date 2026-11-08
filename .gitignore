@@ -1,0 +1,7 @@
+.env
+.venv/
+.deps/
+.pnpm-store/
+__pycache__/
+node_modules/
+dist/
