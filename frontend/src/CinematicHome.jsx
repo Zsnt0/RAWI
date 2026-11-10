@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUpRight, Pause, Play } from 'lucide-react';
+import { AGENTS } from './data';
+import { Spark } from './Mark';
+import AgentMap from './AgentMap';
 
 export default function CinematicHome({ navigate, campaigns, open }) {
   const heroRef = useRef(null);
@@ -90,6 +93,14 @@ export default function CinematicHome({ navigate, campaigns, open }) {
     }
   };
 
+  useEffect(() => {
+    // Some browsers block autoplay until the first interaction; start the film then.
+    const start = () => { const v = videoRef.current; if (v && source && !paused && !reduced && v.paused) v.play().catch(() => {}); };
+    const events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, start, { once: true, passive: true }));
+    return () => events.forEach(e => window.removeEventListener(e, start));
+  }, [source, paused, reduced]);
+
   return <main className="cinematic-home">
     <section className="film-hero" ref={heroRef} aria-labelledby="hero-title">
       <div className="film-frame">
@@ -123,30 +134,19 @@ export default function CinematicHome({ navigate, campaigns, open }) {
     <section id="rawi-story" className="story-section section-shell">
       <div className="section-rule"><span>01 / THE IDEA</span><span lang="en" dir="ltr">ROOM TO IMAGINE</span></div>
       <div className="story-layout">
-        <div className="story-note"><p>FROM A FIRST SPARK<br />TO A LASTING IMPRESSION.</p></div>
+        <div className="story-note"><Spark size={64} className="story-spark" /><p>FROM A FIRST SPARK<br />TO A LASTING IMPRESSION.</p></div>
         <div dir="ltr" lang="en">
           <h2 className="editorial-display">Your ideas deserve<br /><span className="soft-text">a little spotlight.</span></h2>
           <p className="story-description">Bring your imagination. RAWI helps you shape it into campaign concepts, storyboards, and captions that connect with your audience.</p>
-          <button className="quiet-link" onClick={() => navigate('create')}>Let’s make something <ArrowUpRight size={18} /></button>
         </div>
       </div>
     </section>
 
     <section className="selected-section section-shell">
-      <div className="section-rule"><span>02 / SELECTED CONCEPTS</span><span lang="en" dir="ltr">A FEW POSSIBILITIES</span></div>
-      <div className="editorial-heading"><h2>Every idea.<br /><span>A different story.</span></h2><p dir="ltr" lang="en">Three stories. Three creative directions.<br />Sample campaigns to get your imagination going.</p></div>
-      <div className="concept-grid">
-        {campaigns.filter(campaign => campaign.sample).map((campaign, index) => <button
-          key={campaign.id} className="concept-card" onClick={() => open(campaign)}>
-          <div className={`concept-space concept-space-${index}`}>
-            <span className="frame-index">0{index + 1} / CONCEPT</span>
-            <span className="empty-frame"><span>＋</span>YOUR STORY GOES HERE</span>
-            <span className="frame-type">PHOTO / VIDEO PLACEHOLDER</span>
-          </div>
-          <div className="concept-info"><div><p>{campaign.brand} / {campaign.platform}</p><h3>{campaign.title}</h3></div><ArrowUpRight size={22} /></div>
-        </button>)}
-      </div>
-      <button className="quiet-link library-link" onClick={() => navigate('campaigns')}>Explore all campaigns <ArrowUpRight size={18} /></button>
+      <div className="section-rule"><span>02 / THE AGENTS</span><span lang="en" dir="ltr">ONE JOB EACH</span></div>
+      <div className="editorial-heading"><h2>One brief.<br /><span>A team of agents.</span></h2><p dir="ltr" lang="en">Follow the route from your brief to a campaign ready to publish.<br />Each agent hands its work to the next, and you approve before anything goes out.</p></div>
+      <AgentMap />
+      <button className="quiet-link library-link" onClick={() => navigate('campaigns')}>See the agents at work in a campaign <ArrowUpRight size={18} /></button>
     </section>
 
     <section className="process-section section-shell">
@@ -155,8 +155,8 @@ export default function CinematicHome({ navigate, campaigns, open }) {
       <div className="process-grid" dir="ltr" lang="en">
         {[
           ['01', 'Tell us your idea', 'Introduce your brand and product, then pick a creative direction from our sample trends.'],
-          ['02', 'Watch it take shape', 'Create your campaign concept, scenes, captions, and posting plan in one place.'],
-          ['03', 'Make a date for it', 'Review and approve your campaign, then choose a launch date and add it to Google Calendar.'],
+          ['02', 'Watch the agents work', 'See each agent take its turn and read what it produced, step by step.'],
+          ['03', 'Approve and schedule', 'Review the campaign, approve it, then choose a launch date and add it to Google Calendar.'],
         ].map(([number, title, description]) => <article key={number}>
           <span className="process-number">{number}</span><h3>{title}</h3><p>{description}</p>
         </article>)}

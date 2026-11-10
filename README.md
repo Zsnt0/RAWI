@@ -33,7 +33,9 @@ For example, a coffee shop can describe a new iced latte, choose TikTok and a no
 
 With `GEMINI_API_KEY` configured, the backend sends the brief to **Gemini 2.5 Flash** and validates the returned campaign structure. Without a key, it returns a deterministic demo campaign so the workflow can be explored without an AI account.
 
-The current implementation uses **one generation prompt**, not separate autonomous agents. The prompt is inside `generate()` in [`backend/main.py`](backend/main.py).
+The backend runs a **sequential multi-agent workflow**: Trend Intelligence (rule-based, on a curated dated list), Campaign Strategy, Content Writing and Visual Production (a look and shot list; the video and photos are made by the team for now). Each agent has its own prompt and route (`/api/agent/trend|strategy|content|visual|finish`), and `/api/generate` runs all of them in one call. The owner approval step and scheduling happen in the app; results tracking and campaign memory are in development.
+
+Every campaign page shows a step-by-step timeline of what each agent did and produced. The three sample campaigns use the Matcha Ns example, with videos in `frontend/public/media/` (replace them by editing `frontend/src/data.js`).
 
 ### Current boundaries
 
