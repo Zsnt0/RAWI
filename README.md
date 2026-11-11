@@ -141,3 +141,4 @@ npm run build
 ## Next milestones
 
 Planned extensions include dedicated strategy, copywriting, and review agents; user accounts and database storage; direct Google Calendar integration; and media production and publishing integrations. These are future work, not current MVP features.
+
