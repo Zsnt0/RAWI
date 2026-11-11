@@ -1356,3 +1356,15 @@ button.card:hover {
   .map-label p { font-size: .82rem; }
 }
 @media (prefers-reduced-motion: reduce) { .map-progress, .map-stop { transition: none !important; } }
+
+/* A restrained ivory glow echoes the typography. */
+.agents-glow { position: relative; isolation: isolate; }
+.agents-glow::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+  inset: 0; border-radius: 40%;
+  background: radial-gradient(ellipse at 50% 42%, rgba(242, 239, 231, .075) 0%, rgba(242, 239, 231, .025) 32%, transparent 68%);
+  filter: blur(40px);
+}
+@media (max-width: 767px) {
+  .agents-glow::before { filter: blur(24px); }
+}

@@ -32,7 +32,7 @@ export const SEEDS = [
       { scene: 4, duration: '13–18s', visual: 'Brand end card with the order button.', voiceover: 'On-screen: Order now.' },
     ],
     postingPlan: [{ day: 'Day 1', task: 'Review and approve the ad' }, { day: 'Day 2', task: 'Schedule the TikTok post for the evening' }, { day: 'Day 3', task: 'Reply to WhatsApp orders and note which drink is asked for most' }],
-    video: { src: '/media/campaign-1-green-start.mp4', poster: '/media/campaign-1-poster.webp', ratio: '9 / 16', note: 'Graphic motion ad, 18 seconds.' },
+    video: { src: '/media/campaign-1-green-start.mp4', poster: '/media/campaign-1-cover.png', ratio: '9 / 16', note: 'Graphic motion ad, 18 seconds.' },
     agents: {
       trend: { name: 'Winter mornings', why: 'Cool weather brings back warm drinks, comfort food and cozy things.', caution: TREND_NOTE },
       strategy: { audience: 'Students and young adults near North Al-Oraisa who want a cold matcha after class or work.', angle: 'Two drinks, one clear colour. Make the choice easy.', trustMoves: ['Show the exact menu names', 'Say how to order and where to pick up', 'Keep the claims simple'] },
@@ -54,7 +54,7 @@ export const SEEDS = [
       { scene: 4, duration: '12–14s', visual: 'Close-up of the swan logo on the cup.', voiceover: 'No voiceover.' },
     ],
     postingPlan: [{ day: 'Day 1', task: 'Pick the final cut and choose the sound inside TikTok' }, { day: 'Day 2', task: 'Post in the evening' }, { day: 'Day 3', task: 'Check views and WhatsApp orders' }],
-    video: { src: '/media/campaign-2-first-sip.mp4', poster: '/media/campaign-2-poster.webp', ratio: '9 / 16', note: 'Filmed by the team, 14 seconds.' },
+    video: { src: '/media/campaign-2-first-sip.mp4', poster: '/media/campaign-2-cover.png', ratio: '9 / 16', note: 'Filmed by the team, 14 seconds.' },
     agents: {
       trend: { name: 'POV', why: 'First-person moments feel real and are easy to film with a phone.', caution: 'A format, not a live trend. Keep the face out of frame if the person asks.' },
       strategy: { audience: 'Young drivers and commuters who buy a drink on the way.', angle: 'The drive is the stage. The cup is the star.', trustMoves: ['Real cup, real drink', 'No exaggerated claims', 'Show the logo clearly at the end'] },

@@ -142,7 +142,7 @@ export default function CinematicHome({ navigate, campaigns, open }) {
       </div>
     </section>
 
-    <section className="selected-section section-shell">
+    <section className="selected-section section-shell agents-glow">
       <div className="section-rule"><span>02 / THE AGENTS</span><span lang="en" dir="ltr">ONE JOB EACH</span></div>
       <div className="editorial-heading"><h2>One brief.<br /><span>A team of agents.</span></h2><p dir="ltr" lang="en">Follow the route from your brief to a campaign ready to publish.<br />Each agent hands its work to the next, and you approve before anything goes out.</p></div>
       <AgentMap />
