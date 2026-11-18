@@ -87,3 +87,13 @@ export const SEEDS = [
     pipeline: [{ agent: 'trend', kind: 'rule', ms: 0 }, { agent: 'strategy', kind: 'writing', ms: 0 }, { agent: 'content', kind: 'writing', ms: 0 }, { agent: 'visual', kind: 'writing', ms: 0 }],
   },
 ];
+
+// Current guided workflow; legacy sample trails retain their original labels above.
+export const WORKFLOW_AGENTS = [
+  { id: 'screening', name: 'Initial Screening', job: 'Checks the brief and flags rights, consent and claim risks.' },
+  { id: 'ideas', name: 'Trends & Storytelling', job: 'Suggests one direction and three screened scenarios.' },
+  { id: 'coordinator', name: 'Human Coordinator', job: 'Records owner feedback and approves a scenario.' },
+  { id: 'production', name: 'Creative Production', job: 'Writes the approved script, caption and visual brief.' },
+  { id: 'audit', name: 'Audit & Owner Approval', job: 'Reviews the final content before owner sign-off.' },
+  { id: 'planning', name: 'Campaign Planning', job: 'Hands the approved campaign to Google Calendar.' },
+];

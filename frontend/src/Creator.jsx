@@ -1,139 +1,86 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, Save, Sparkles } from 'lucide-react';
-import AgentTrail from './AgentTrail';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Check, Loader2, ShieldCheck, Upload } from 'lucide-react';
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const FALLBACK_TRENDS = [{ id: 'winter-mornings', name: { en: 'Winter mornings' } }];
-const RUN = [
-  ['trend', 'Trend Intelligence', 'Choosing a trend from the dated list'],
-  ['strategy', 'Campaign Strategy', 'Defining the audience, angle and trust moves'],
-  ['content', 'Content Writing', 'Writing the hook, scenes, caption and plan'],
-  ['visual', 'Visual Production', 'Preparing the look and the shot list'],
-];
-const PACE = { trend: 700, strategy: 900, content: 1000, visual: 2200 };
+const STORAGE = 'rawi-guided-workflows-v1';
+const stages = ['Business', 'Screening', 'Scenarios', 'Production', 'Final audit', 'Owner approval', 'Schedule'];
+const stageNumber = { screening: 1, 'ideas-ready': 2, 'scenario-review': 2, 'scenario-approved': 3, draft: 4, 'audit-review': 4, 'audit-passed': 5, approved: 6, scheduled: 6 };
+const readSaved = () => { try { return JSON.parse(localStorage.getItem(STORAGE)) || []; } catch { return []; } };
 
-function Field({ label, children }) {
-  return <label className="block"><span className="text-sm font-bold block mb-2">{label}</span>{children}</label>;
+async function request(path, body, token) {
+  let response;
+  try {
+    response = await fetch('/api/workflow' + path, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  } catch { throw new Error('Cannot reach the backend. Start FastAPI on port 8000 and try again.'); }
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(typeof data?.detail === 'string' ? data.detail : response.status === 422 ? 'Check the required fields and upload size.' : 'The backend is unavailable. Check the server and try again.');
+  if (!data?.id) throw new Error('The backend returned an unexpected response. Check the API configuration.');
+  return data;
 }
 
-async function post(path, body) {
-  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) {
-    const d = await res.json().catch(() => ({}));
-    throw new Error(Array.isArray(d.detail) ? 'Check the required fields and description length.' : d.detail || 'Generation failed. Try again.');
+function Report({ report }) {
+  return <div className={`review-report decision-${report.decision.toLowerCase()}`}><div className="flex justify-between gap-3"><b>{report.decision}</b><span className="text-xs muted">{report.policy}</span></div><ul className="list-disc pl-5 mt-3 space-y-2 text-sm">{report.findings.map((f, i) => <li key={i}>{f}</li>)}</ul><p className="muted text-xs mt-3">{report.method}. {report.notice}</p></div>;
+}
+function Checks({ items, value, set }) { return <div className="space-y-3 my-5">{items.map(([id, label]) => <label key={id} className="flex items-start gap-3 text-sm"><input className="mt-1 accent-[#cbb98e]" type="checkbox" checked={value.includes(id)} onChange={e => set(e.target.checked ? [...value, id] : value.filter(k => k !== id))} /><span>{label}</span></label>)}</div>; }
+function Field({ label, children }) { return <label className="block"><span className="block text-sm font-bold mb-2">{label}</span>{children}</label>; }
+
+export default function Creator({ notify }) {
+  const [saved, setSaved] = useState(readSaved), [flow, setFlow] = useState(null), [token, setToken] = useState('');
+  const [brand, setBrand] = useState(''), [product, setProduct] = useState(''), [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(''), [error, setError] = useState(''), [choice, setChoice] = useState(0);
+  const [feedback, setFeedback] = useState(''), [evidence, setEvidence] = useState(''), [checks, setChecks] = useState([]);
+  const [draft, setDraft] = useState(''), [media, setMedia] = useState(''), [launch, setLaunch] = useState(''), [calendarOpened, setCalendarOpened] = useState(false);
+  useEffect(() => { setChecks([]); setEvidence(''); setFeedback(''); setCalendarOpened(false); if (flow) { setDraft(flow.draftText || ''); setMedia(flow.media || ''); } }, [flow?.version, flow?.id]);
+  function retain(next, access) {
+    setFlow(next); setToken(access);
+    const items = [{ id: next.id, token: access, brand: next.brand, product: next.product, stage: next.stage }, ...readSaved().filter(i => i.id !== next.id)];
+    localStorage.setItem(STORAGE, JSON.stringify(items)); setSaved(items);
   }
-  return res.json();
-}
-
-export default function Creator({ add, notify }) {
-  const [form, setForm] = useState({ brand: '', product: '', audience: '', platform: 'TikTok', trend: 'winter-mornings', goal: 'Brand awareness', description: '' });
-  const [trends, setTrends] = useState(FALLBACK_TRENDS);
-  const [asOf, setAsOf] = useState('');
-  const [status, setStatus] = useState({});          // agent id -> idle | run | done
-  const [outs, setOuts] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-  const [mode, setMode] = useState('');
-  const alive = useRef(true);
-
-  useEffect(() => {
-    alive.current = true;
-    fetch('/api/trends').then(r => r.json()).then(d => { if (alive.current && d.items) { setTrends(d.items); setAsOf(d.asOf); } }).catch(() => {});
-    return () => { alive.current = false; };
-  }, []);
-
-  const change = (k, v) => { setForm(f => ({ ...f, [k]: v })); setResult(null); setError(''); setStatus({}); setOuts({}); };
-
-  async function generate(e) {
+  async function work(label, fn) { setBusy(label); setError(''); try { await fn(); } catch (e) { setError(e.message); } finally { setBusy(''); } }
+  const act = (action, extra = {}) => work('Processing…', async () => { const next = await request(`/${flow.id}/${action}`, { version: flow.version, scenario: choice, feedback, evidence, checks, ...extra }, token); retain(next, token); notify('Workflow updated'); });
+  function create(e) {
     e.preventDefault();
-    setLoading(true); setError(''); setResult(null); setOuts({}); setStatus({});
-    const req = { ...form, language: 'en' };
-    const steps = [];
-    const run = async (id, call) => {
-      setStatus(s => ({ ...s, [id]: 'run' }));
-      const demo = mode !== 'gemini';
-      const [r] = await Promise.all([call(), demo ? sleep(PACE[id]) : Promise.resolve()]);
-      steps.push({ agent: id, kind: r.kind, ms: r.ms });
-      if (r.mode) setMode(r.mode);
-      setOuts(o => ({ ...o, [id]: r.out }));
-      setStatus(s => ({ ...s, [id]: 'done' }));
-      return r.out;
-    };
-    try {
-      await run('trend', () => post('/api/agent/trend', req));
-      const strategy = await run('strategy', () => post('/api/agent/strategy', { req }));
-      const content = await run('content', () => post('/api/agent/content', { req, strategy }));
-      const visual = await run('visual', () => post('/api/agent/visual', { req, content }));
-      const final = await post('/api/agent/finish', { req, strategy, content, visual, steps });
-      if (alive.current) { setResult({ ...final, strategy, content, visual }); notify('Campaign generated successfully'); }
-    } catch (err) {
-      setStatus({});
-      setError(err instanceof TypeError ? 'Could not reach FastAPI. Check that it is running on port 8000.' : err.message);
-    } finally { setLoading(false); }
-  }
-
-  function save() {
-    if (!result) return;
-    const { strategy, content, visual } = result;
-    add({
-      id: crypto.randomUUID(), brand: form.brand, product: form.product, platform: form.platform, goal: form.goal,
-      title: content.title, concept: content.concept, script: content.script, caption: content.caption, postingPlan: content.postingPlan,
-      trend: result.trend.name, status: 'Pending', type: 'Video', sample: false, generationMode: result.generationMode, pipeline: result.pipeline,
-      agents: {
-        trend: { name: result.trend.name, why: result.brandSafety.fit, caution: result.brandSafety.caution },
-        strategy: { audience: `${strategy.audience.who} ${strategy.audience.why}`.trim(), angle: strategy.angle, trustMoves: strategy.trustMoves },
-        content: { hook: content.script[0]?.visual, scenes: content.script.length, hashtags: content.hashtags },
-        visual: { theme: visual.theme, format: visual.format, shots: visual.shots.map(s => s.shot) },
-        safety: result.brandSafety.notes,
-      },
+    work('Screening your brief…', async () => {
+      if (!file || file.size > 5 * 1024 * 1024) throw new Error('Choose a brand identity file smaller than 5 MB.');
+      const mime = file.type || (file.name.endsWith('.txt') ? 'text/plain' : '');
+      if (!['application/pdf', 'image/png', 'image/jpeg', 'text/plain'].includes(mime)) throw new Error('Use a PDF, PNG, JPEG or UTF-8 text brand guide.');
+      const encoded = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result.split(',')[1]); reader.onerror = () => reject(new Error('Could not read the file.')); reader.readAsDataURL(file); });
+      const next = await request('', { brand: brand.trim(), product: product.trim(), filename: file.name, mime, file: encoded });
+      retain(next, next.token);
     });
   }
-
-  const showRun = loading || Object.keys(status).length > 0;
-  return <div className="max-w-7xl mx-auto px-5 md:px-8 py-12">
-    <div className="mb-10"><p className="text-silver text-xs tracking-[.22em] font-bold mb-4">THE CAMPAIGN GENERATOR</p><h1 className="text-4xl md:text-6xl font-bold tracking-tight max-w-3xl">Big ideas start here.</h1><p className="muted text-base mt-4 max-w-2xl">Tell RAWI about your product. The agents work one after another and you can watch each step.</p></div>
-    <div className="grid lg:grid-cols-[.85fr_1.15fr] gap-6">
-      <form onSubmit={generate} className="card p-6 md:p-8"><fieldset disabled={loading} className="space-y-5">
-        <h2 className="text-2xl font-bold mb-5">01 / Campaign brief</h2>
-        <Field label="Brand name"><input className="field" required maxLength={120} placeholder="e.g. Matcha Ns" value={form.brand} onChange={e => change('brand', e.target.value)} /></Field>
-        <Field label="Product"><input className="field" required maxLength={160} placeholder="e.g. Vanilla matcha" value={form.product} onChange={e => change('product', e.target.value)} /></Field>
-        <Field label="Product description (optional)"><textarea className="field" rows={3} maxLength={2000} placeholder="What makes this product special?" value={form.description} onChange={e => change('description', e.target.value)} /></Field>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Target audience"><input className="field" placeholder="e.g. Students near the shop" value={form.audience} onChange={e => change('audience', e.target.value)} /></Field>
-          <Field label="Platform"><select className="field" value={form.platform} onChange={e => change('platform', e.target.value)}><option>TikTok</option><option>Instagram</option><option>Snapchat</option></select></Field>
-        </div>
-        <Field label="Choose a trend">
-          <div className="flex flex-wrap gap-2">{trends.map(t => <button type="button" key={t.id} aria-pressed={form.trend === t.id} onClick={() => change('trend', t.id)} className={`pill transition-colors ${form.trend === t.id ? 'bg-silver text-ink border-silver' : 'text-[#bbb6aa]'}`}>{t.name.en}</button>)}</div>
-          <p className="muted text-xs mt-2">A curated, dated sample{asOf ? ` (${asOf})` : ''}. Not live social-media data.</p>
-        </Field>
-        <Field label="Campaign goal"><select className="field" value={form.goal} onChange={e => change('goal', e.target.value)}><option>Brand awareness</option><option>Product launch</option><option>Engagement</option><option>Increase sales</option></select></Field>
-        <button disabled={loading} className="btn btn-primary w-full">{loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}{loading ? 'Agents are working...' : 'Generate campaign'}</button>
-        {error && <p role="alert" className="text-silver text-sm">{error}</p>}
-      </fieldset></form>
-      <div className="card p-6 md:p-8">
-        <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold">02 / The agents at work</h2><span className="pill">{result ? 'READY TO REVIEW' : loading ? 'WORKING' : 'AWAITING INPUT'}</span></div>
-        {!showRun && <div className="min-h-[420px] flex flex-col justify-center items-center text-center"><div className="w-20 h-20 rounded-2xl bg-silver/10 text-silver grid place-items-center mb-6"><Sparkles size={35} /></div><h3 className="text-3xl font-bold">Your next big idea awaits.</h3><p className="muted max-w-sm mt-3">Complete the brief and generate. You will see each agent take its turn here.</p></div>}
-        {showRun && !result && <ol className="trail-list trail-live">
-          {RUN.map(([id, name, doing], i) => {
-            const st = status[id] || 'idle';
-            return <li key={id} className={`trail-agent ${st === 'done' ? 'is-done' : st === 'run' ? 'is-run' : ''}`}>
-              <span className="trail-dot" aria-hidden="true">{st === 'done' ? <Check size={14} /> : i + 1}</span>
-              <div className="trail-body"><div className="trail-head"><b>{name}</b><span className="trail-state">{st === 'run' ? (id === 'visual' ? 'Processing' : 'Working') : st === 'done' ? 'Done' : 'Waiting'}</span></div>
-                {st === 'run' && <p className="muted text-sm mt-2">{doing}{id === 'visual' ? '. The video and photos themselves are made by the team for now.' : ''}</p>}
-                {st === 'done' && outs[id] && <div className="trail-out"><span className="trail-out-label">PRODUCED</span><p className="trail-out-main">{id === 'trend' ? outs[id].name.en : id === 'strategy' ? outs[id].angle : id === 'content' ? outs[id].title : outs[id].theme}</p></div>}
-              </div></li>;
-          })}
-        </ol>}
-        {result && <div className="space-y-6">
-          <div className="bg-silver/10 rounded-xl p-5 border border-silver/20"><span className="text-silver text-xs tracking-widest">GENERATED CONCEPT</span><h3 className="text-3xl font-bold mt-2">{result.title}</h3><p className="muted mt-3 leading-relaxed">{result.concept}</p></div>
-          <div><h3 className="font-bold text-xl mb-3">Storyboard</h3>{(result.script || []).map((s, i) => <div key={i} className="border-b border-white/10 py-3 flex gap-3"><span className="text-silver font-bold">{String(i + 1).padStart(2, '0')}</span><div><p className="text-xs text-silver">{s.duration}</p><p className="text-sm mt-1">{s.visual}</p>{s.voiceover && <p className="muted text-xs mt-1">Voiceover: {s.voiceover}</p>}</div></div>)}</div>
-          <div><h3 className="font-bold text-xl mb-2">Caption</h3><p className="muted">{result.caption}</p></div>
-          <p className="muted text-xs">{result.generationMode === 'demo' ? 'Generated by the built-in demo writer. Add a Gemini API key to enable live AI generation. Step timing in demo mode is paced so you can follow it.' : 'Generated with Gemini AI.'}</p>
-          <button className="btn btn-primary w-full" onClick={save}><Save size={17} /> Save for approval</button>
-          <p className="muted text-xs">After saving, the campaign page shows the full step list for every agent.</p>
-        </div>}
-      </div>
-    </div>
-  </div>;
+  const resume = item => work('Opening workflow…', async () => retain(await request('/' + item.id, null, item.token), item.token));
+  const dirty = flow && (draft !== (flow.draftText || '') || media !== (flow.media || ''));
+  const launchValid = Number.isFinite(new Date(launch).getTime()) && new Date(launch) > new Date();
+  let calendar = '';
+  if (launchValid && flow) {
+    const date = new Date(launch), end = new Date(date.getTime() + 3600000);
+    const fmt = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    calendar = 'https://calendar.google.com/calendar/render?' + new URLSearchParams({ action: 'TEMPLATE', text: `RAWI · ${flow.production?.title}`, details: `${flow.brand}\n${flow.media}`, dates: `${fmt(date)}/${fmt(end)}` });
+  }
+  return <main className="max-w-7xl mx-auto px-5 md:px-8 py-12">
+    <div className="flex justify-between items-start gap-5 mb-8"><div><p className="text-silver text-xs tracking-[.22em] mb-4">THE CAMPAIGN WORKSPACE</p><h1 className="text-4xl md:text-6xl font-bold tracking-tight">A story worth approving.</h1><p className="muted mt-4 max-w-2xl">One brief. One creative direction. Three possibilities. Human judgment at every important step.</p></div>{flow && <button disabled={!!busy} className="btn btn-outline" onClick={() => { setFlow(null); setError(''); }}>New brief</button>}</div>
+    <div className="workflow-steps" aria-label="Campaign stages">{stages.map((label, i) => <span key={label} aria-current={i === (flow ? stageNumber[flow.stage] : 0) ? 'step' : undefined} className={i <= (flow ? stageNumber[flow.stage] : 0) ? 'is-active' : ''}><small>{String(i + 1).padStart(2, '0')}</small>{label}</span>)}</div>
+    <p className="muted text-xs mb-6">Local MVP: coordinator and owner actions are recorded declarations, not authenticated user roles. No automatic publishing.</p>
+    {error && <div role="alert" className="review-report mb-5">{error}{flow && <button className="quiet-link ml-4" onClick={() => resume({ id: flow.id, token })}>Reload saved workflow</button>}</div>}
+    {busy && <div role="status" className="flex gap-3 items-center mb-5 text-silver"><Loader2 className="animate-spin" size={18}/>{busy}</div>}
+    <fieldset disabled={!!busy} className="min-w-0">
+    {!flow ? <div className="grid lg:grid-cols-[1.2fr_.8fr] gap-6"><form onSubmit={create} className="card p-6 md:p-8 space-y-6"><h2 className="text-2xl font-bold">Introduce your business</h2><Field label="Business name"><input className="field" required maxLength={120} value={brand} onChange={e => setBrand(e.target.value)} placeholder="e.g. Matcha Ns"/></Field><Field label="What product are you selling?"><input className="field" required maxLength={160} value={product} onChange={e => setProduct(e.target.value)} placeholder="e.g. Vanilla matcha"/></Field><Field label="Brand identity file · required"><div className="brand-upload"><Upload size={24}/><input required type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" onChange={e => setFile(e.target.files[0])}/><p className="muted text-xs">PDF, PNG, JPEG or text · up to 5 MB. Include your logo, colors, tone and product references.</p></div></Field><p className="muted text-xs">Your file is stored on this backend. In Gemini mode it is sent to Google for screening and generation. Upload only material you are authorized to share.</p><button className="btn btn-primary w-full"><ShieldCheck size={18}/> Submit for initial screening</button></form><aside className="card p-6 md:p-8"><h2 className="text-xl font-bold">Continue a campaign</h2><p className="muted text-sm mt-2 mb-5">Saved workflows from this browser. Keep this browser’s data to retain access.</p>{saved.length ? saved.map(item => <button key={item.id} onClick={() => resume(item)} className="workflow-resume"><b>{item.brand}</b><span className="muted text-sm">{item.product}</span><small className="text-silver">{item.stage.replaceAll('-', ' ')} →</small></button>) : <p className="muted">Your campaigns will appear here.</p>}</aside></div> : <div className="space-y-6">
+    <div className="card p-5 flex flex-wrap justify-between gap-4"><div><b>{flow.brand}</b><p className="muted text-sm">{flow.product} · {flow.asset.name}</p></div><span className="pill">{flow.mode === 'gemini' ? 'GEMINI API' : 'DEMO · NO LIVE AI'}</span></div>
+    {flow.mode === 'demo' && <p className="muted text-sm">No Gemini key is configured. This is a template demonstration with limited rule checks; the uploaded identity is stored but not visually interpreted. Configure GEMINI_API_KEY on the backend for LLM agents.</p>}
+    {flow.stage === 'screening' && <section className="card p-6 md:p-8"><h2 className="text-2xl font-bold mb-5">Initial screening</h2><Report report={flow.screening}/>{flow.screening.decision !== 'Reject' ? <><Checks value={checks} set={setChecks} items={[
+      ['rights', 'I checked authorization to use and modify the brand identity and source assets.'], ['consent', 'Any personal likeness or voice has documented permission, or no identifiable person is used.'], ['claims', 'Product facts, offers and claims are supported; no false endorsements are requested.'], ['permissions', 'I checked applicable product/platform permissions and resolved missing evidence.']]}/><Field label="Reviewer evidence and references"><textarea className="field" rows={3} maxLength={2000} value={evidence} onChange={e => setEvidence(e.target.value)} placeholder="Record document references and how each issue was resolved. A checkbox alone does not establish rights."/></Field><button className="btn btn-primary mt-5" onClick={() => act('clear-screening')}>Record review and continue <ArrowRight size={16}/></button></> : <p className="mt-4">Correct the rejected request and start a new brief. Human approval cannot override a rejection.</p>}</section>}
+    {flow.stage === 'ideas-ready' && <section className="card p-8"><h2 className="text-2xl font-bold">Discover three possibilities</h2><p className="muted my-4">The agent reads your brand identity, suggests one creative direction and builds three distinct scenarios. This is an LLM suggestion—not live X/Twitter research or verified trend popularity.</p><button className="btn btn-primary" onClick={() => act('ideas')}>Generate one direction + three scenarios <ArrowRight size={16}/></button></section>}
+    {flow.ideas && <section><div className="mb-5"><p className="text-silver text-xs tracking-widest">{flow.mode === 'gemini' ? 'AI-SUGGESTED DIRECTION' : 'DEMO CREATIVE DIRECTION'} · NOT A LIVE TREND</p><h2 className="text-3xl mt-2">{flow.ideas.trend}</h2><p className="muted mt-2">{flow.ideas.rationale}</p></div><div className="grid md:grid-cols-3 gap-4">{flow.ideas.scenarios.map((scenario, i) => <article key={i} className={`card p-5 scenario-card ${choice === i ? 'is-selected' : ''}`}><p className="text-silver text-xs mb-3">SCENARIO 0{i + 1}</p><h3 className="text-xl font-bold">{scenario.title}</h3><p className="mt-3 text-sm">{scenario.hook}</p><p className="muted my-4 text-sm whitespace-pre-wrap">{scenario.concept}</p><Report report={scenario.audit}/>{flow.stage === 'scenario-review' && <button className="btn btn-outline mt-4 w-full" aria-pressed={choice === i} onClick={() => { setChoice(i); setChecks([]); setFeedback(''); setEvidence(''); }}>{choice === i ? 'Selected for review' : 'Review this scenario'}</button>}{flow.selection === i && <p className="mt-3 text-silver">Approved scenario</p>}</article>)}</div></section>}
+    {flow.stage === 'scenario-review' && <section className="card p-6 md:p-8"><h2 className="text-2xl font-bold mb-4">Coordinator review · scenario {choice + 1}</h2><Field label="Owner feedback / requested revision"><textarea className="field" rows={3} maxLength={2000} value={feedback} onChange={e => setFeedback(e.target.value)}/></Field><button className="btn btn-outline mt-4" onClick={() => act('revise')}>Revise selected scenario and screen again</button><Checks value={checks} set={setChecks} items={[
+      ['ownerConsulted', 'I discussed this scenario with the owner and recorded their feedback.'], ['scenarioChecked', 'I reviewed the scenario, source rights and all screening findings.']]}/><Field label="Resolution evidence for flagged issues (if any)"><textarea className="field" maxLength={2000} value={evidence} onChange={e => setEvidence(e.target.value)}/></Field><button disabled={flow.ideas.scenarios[choice].audit.decision === 'Reject'} className="btn btn-primary mt-5" onClick={() => act('approve-scenario')}>Approve scenario for production</button></section>}
+    {flow.stage === 'scenario-approved' && <section className="card p-8"><h2 className="text-2xl font-bold">Ready for the creative agent</h2><p className="muted my-4">Generate the script, captions and visual brief for the approved scenario. AI video and image generation are not connected in this MVP.</p><button className="btn btn-primary" onClick={() => act('produce')}>Generate production brief</button></section>}
+    {flow.production && <section className="card p-6 md:p-8 space-y-5"><h2 className="text-2xl font-bold">Production draft</h2><p className="muted text-sm">Create the media with your production team, then add its HTTPS link. No video is generated here. Editing this draft resets the audit, approval and schedule.</p><Field label="Script, caption and visual instructions"><textarea className="field" rows={12} maxLength={12000} value={draft} onChange={e => setDraft(e.target.value)}/></Field><Field label="Final media link"><input className="field" type="url" placeholder="https://…" value={media} maxLength={1000} onChange={e => setMedia(e.target.value)}/></Field><div className="flex flex-wrap gap-3"><button disabled={!dirty} className="btn btn-outline" onClick={() => act('save-draft', { text: draft, media })}>Save draft changes</button>{['draft', 'audit-review'].includes(flow.stage) && <button disabled={dirty} className="btn btn-primary" onClick={() => act('audit')}>Run final text audit</button>}</div>{dirty && <p className="text-sm text-silver">Save changes before running the audit or approving.</p>}</section>}
+    {flow.finalAudit && <section className="card p-6 md:p-8"><h2 className="text-2xl font-bold mb-4">Final audit</h2><Report report={flow.finalAudit}/>{flow.stage === 'audit-review' && flow.finalAudit.decision !== 'Reject' && <><Checks value={checks} set={setChecks} items={[
+      ['fidelity', 'I watched the final media and confirmed accurate products, brand identity, faces and audio.'], ['rights', 'I verified commercial rights and consent for all final assets, voices and music.'], ['claims', 'I checked all spoken, visual and written claims; no fabricated results or endorsements remain.'], ['disclosure', 'I checked platform rules and added any required AI disclosures.'], ['permissions', 'I verified applicable advertising permissions and resolved outstanding issues.']]}/><Field label="Audit evidence / media version reviewed"><textarea className="field" rows={3} maxLength={2000} value={evidence} onChange={e => setEvidence(e.target.value)}/></Field><button disabled={dirty} className="btn btn-primary mt-5" onClick={() => act('clear-audit')}>Record human media audit</button></>}{flow.finalAudit.decision === 'Reject' && <p className="mt-4">Scheduling is blocked. Edit the draft, save it, and run the audit again.</p>}</section>}
+    {flow.stage === 'audit-passed' && <section className="card p-8"><h2 className="text-2xl font-bold">Final owner approval</h2><Checks value={checks} set={setChecks} items={[['ownerApproved', 'The business owner reviewed and approved this exact final advertisement.']]}/><button disabled={dirty} className="btn btn-primary" onClick={() => act('owner-approve')}>Record owner approval <Check size={17}/></button></section>}
+    {['approved', 'scheduled'].includes(flow.stage) && <section className="card p-8 space-y-4"><h2 className="text-2xl font-bold">Plan the launch</h2><p className="muted text-sm">Save a prefilled event in Google Calendar, then confirm below. This does not publish a post or collect performance metrics.</p>{flow.launch && <p>Scheduled: {new Date(flow.launch).toLocaleString()}</p>}<Field label="Launch date and time"><input className="field" type="datetime-local" value={launch} onChange={e => { setLaunch(e.target.value); setCalendarOpened(false); }}/></Field>{launchValid && !dirty && <a className="btn btn-outline" href={calendar} target="_blank" rel="noopener noreferrer" onClick={() => setCalendarOpened(true)}>Open Google Calendar</a>}{calendarOpened && launchValid && <button disabled={dirty} className="btn btn-primary" onClick={() => act('schedule', { launch: new Date(launch).toISOString(), checks: ['calendarSaved'] })}>Confirm event saved</button>}</section>}
+    <details className="card p-5"><summary className="cursor-pointer font-bold">Review history · {flow.history.length} events</summary><ol className="mt-4 space-y-2 text-sm muted">{flow.history.map((entry, i) => <li key={i}>{new Date(entry.at).toLocaleString()} · {entry.action.replaceAll('-', ' ')}</li>)}</ol></details>
+    </div>}
+    </fieldset>
+  </main>;
 }

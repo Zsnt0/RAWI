@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, ChevronDown } from 'lucide-react';
 import { AGENTS } from './data.js';
 
 const DEV = { publish: 2 };            // sub-step index that is still in development
@@ -29,8 +29,10 @@ export default function AgentTrail({ campaign: c }) {
     return true;
   };
   return (
-    <section className="card trail" aria-labelledby="trail-title">
-      <h3 id="trail-title">How the agents built this campaign</h3>
+    <details className="card trail agent-workflow-disclosure">
+      <summary className="agent-workflow-toggle"><span>How agents work</span><ChevronDown size={20} aria-hidden="true" /></summary>
+      <div className="mt-6">
+      <h3>How the agents built this campaign</h3>
       <p className="muted trail-sub">Each agent worked from the output of the one before it. The owner decides before anything is published.</p>
       <ol className="trail-list">
         {AGENTS.map((agent, idx) => {
@@ -71,6 +73,7 @@ export default function AgentTrail({ campaign: c }) {
           );
         })}
       </ol>
-    </section>
+      </div>
+    </details>
   );
 }

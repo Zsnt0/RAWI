@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUp } from 'lucide-react';
 import Mark from './Mark';
-import { AGENTS } from './data';
+import { WORKFLOW_AGENTS as AGENTS } from './data';
 
 export default function Footer({ navigate }) {
   const go = (p) => (e) => { e.preventDefault(); navigate(p); };

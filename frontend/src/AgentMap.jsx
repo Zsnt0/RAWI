@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AGENTS } from './data';
+import { WORKFLOW_AGENTS as AGENTS } from './data';
 
 // Node positions on a 1100 x 440 route. Odd stops sit low, even stops sit high.
 const POINTS = [[110, 330], [280, 150], [450, 330], [620, 150], [790, 330], [960, 150]];

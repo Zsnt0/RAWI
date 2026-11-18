@@ -1368,3 +1368,39 @@ button.card:hover {
 @media (max-width: 767px) {
   .agents-glow::before { filter: blur(24px); }
 }
+
+/* Guided campaign workspace */
+.workflow-steps { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; margin:32px 0 16px; }
+.workflow-steps span { border-top:2px solid #45443d; padding-top:12px; font-size:12px; color:#959389; }
+.workflow-steps small { display:block; margin-bottom:6px; }
+.workflow-steps .is-active { border-color:#cbb98e; color:#f2efe7; }
+.review-report { border:1px solid #827352; background:rgba(203,185,142,.06); border-radius:12px; padding:16px; overflow-wrap:anywhere; }
+.decision-reject { border-color:#ce8b7d; background:rgba(206,139,125,.08); }
+.decision-allow { border-color:#8b9c80; }
+.brand-upload { border:1px dashed #827352; border-radius:14px; padding:24px; display:grid; gap:18px; }
+.brand-upload input { max-width:100%; font-size:14px; }
+.workflow-resume { display:grid; gap:6px; width:100%; text-align:left; padding:18px 0; border-bottom:1px solid #45443d; }
+.scenario-card.is-selected { border-color:#cbb98e; }
+fieldset:disabled { opacity:.65; }
+button:disabled { cursor:not-allowed; opacity:.5; }
+@media(max-width:767px) { .workflow-steps { grid-template-columns:repeat(4,minmax(0,1fr)); row-gap:18px; } }
+
+.agent-workflow-toggle { display:flex; align-items:center; justify-content:space-between; gap:16px; cursor:pointer; font-weight:700; list-style:none; color:var(--cream, #f2efe7); }
+.agent-workflow-toggle::-webkit-details-marker { display:none; }
+.agent-workflow-toggle:focus-visible { outline:2px solid #cbb98e; outline-offset:8px; border-radius:4px; }
+.agent-workflow-disclosure[open] > summary svg { transform:rotate(180deg); }
+
+.demo-agent-flow { max-width:760px; }
+.demo-agent-flow .trail-head b { font-size:1rem; }
+.demo-agent-flow .trail-out { margin-top:16px; }
+.demo-agent-handoff { font-size:12px; color:var(--silver); margin:14px 0 4px; }
+.demo-agent-flow .trail-body { min-width:0; overflow-wrap:anywhere; }
+@media(max-width:600px) {
+  .demo-agent-flow .trail-agent { gap:12px; }
+  .demo-agent-flow .trail-kind { font-size:10px; }
+  .demo-agent-flow .trail-steps li { font-size:13px; }
+  .demo-agent-flow .trail-out { padding:14px; }
+}
+
+.combined-agent-phase + .combined-agent-phase { border-top:1px solid var(--line); margin-top:32px; padding-top:28px; }
+.combined-agent-workflow .demo-agent-flow { max-width:none; }

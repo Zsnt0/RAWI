@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUpRight, Pause, Play } from 'lucide-react';
-import { AGENTS } from './data';
 import { Spark } from './Mark';
 import AgentMap from './AgentMap';
 
@@ -146,7 +145,7 @@ export default function CinematicHome({ navigate, campaigns, open }) {
       <div className="section-rule"><span>02 / THE AGENTS</span><span lang="en" dir="ltr">ONE JOB EACH</span></div>
       <div className="editorial-heading"><h2>One brief.<br /><span>A team of agents.</span></h2><p dir="ltr" lang="en">Follow the route from your brief to a campaign ready to publish.<br />Each agent hands its work to the next, and you approve before anything goes out.</p></div>
       <AgentMap />
-      <button className="quiet-link library-link" onClick={() => navigate('campaigns')}>See the agents at work in a campaign <ArrowUpRight size={18} /></button>
+      <button className="quiet-link library-link" onClick={() => navigate('create')}>Open the guided campaign workspace <ArrowUpRight size={18} /></button>
     </section>
 
     <section className="process-section section-shell">
@@ -154,8 +153,8 @@ export default function CinematicHome({ navigate, campaigns, open }) {
       <h2 className="editorial-display" lang="en" dir="ltr">You bring the spark.<br /><span className="soft-text">We’ll help it grow.</span></h2>
       <div className="process-grid" dir="ltr" lang="en">
         {[
-          ['01', 'Tell us your idea', 'Introduce your brand and product, then pick a creative direction from our sample trends.'],
-          ['02', 'Watch the agents work', 'See each agent take its turn and read what it produced, step by step.'],
+          ['01', 'Tell us your idea', 'Add your business name, product and brand identity file. Start with an initial screening.'],
+          ['02', 'Watch the agents work', 'Review one AI-suggested direction and three scenarios before approving production.'],
           ['03', 'Approve and schedule', 'Review the campaign, approve it, then choose a launch date and add it to Google Calendar.'],
         ].map(([number, title, description]) => <article key={number}>
           <span className="process-number">{number}</span><h3>{title}</h3><p>{description}</p>
